@@ -1,0 +1,45 @@
+<VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Project">
+  <TemplateData>
+    <Name>TemplateFrontExtension</Name>
+    <Description>Web Client Front Extension Template</Description>
+    <ProjectType>CSharp</ProjectType>
+    <ProjectSubType>
+    </ProjectSubType>
+    <SortOrder>1000</SortOrder>
+    <CreateNewFolder>true</CreateNewFolder>
+    <DefaultName>TemplateFrontExtension</DefaultName>
+    <ProvideDefaultName>true</ProvideDefaultName>
+    <LocationField>Enabled</LocationField>
+    <EnableLocationBrowseButton>true</EnableLocationBrowseButton>
+    <Icon>__TemplateIcon.ico</Icon>
+  </TemplateData>
+  <TemplateContent>
+    <Project TargetFileName="TemplateFrontExtension.njsproj" File="TemplateFrontExtension.njsproj" ReplaceParameters="true">
+	  <ProjectItem ReplaceParameters="true" TargetFileName="tsconfig.json">tsconfig.json</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="rollup.config.js">rollup.config.js</ProjectItem>
+      <ProjectItem ReplaceParameters="true" TargetFileName="rollup.config.dev.js">rollup.config.dev.js</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="README.md">README.md</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="package-lock.json">package-lock.json</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="package.json">package.json</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="gulpfile.js">gulpfile.js</ProjectItem>
+	  <ProjectItem ReplaceParameters="true" TargetFileName="copy-path.js">copy-path.js</ProjectItem>
+      <Folder Name="output" TargetFolderName="output">
+      </Folder>
+      <Folder Name="src" TargetFolderName="src">
+		<ProjectItem ReplaceParameters="true" TargetFileName="Index.ts">Index.ts</ProjectItem>	  
+        <Folder Name="Controls" TargetFolderName="Controls">
+          <Folder Name="SomeControl" TargetFolderName="SomeControl">
+            <ProjectItem ReplaceParameters="true" TargetFileName="SomeControl.tsx">SomeControl.tsx</ProjectItem>
+            <ProjectItem ReplaceParameters="true" TargetFileName="SomeControlImpl.tsx">SomeControlImpl.tsx</ProjectItem>
+          </Folder>
+        </Folder>
+        <Folder Name="EventHandlers" TargetFolderName="EventHandlers">
+          <ProjectItem ReplaceParameters="true" TargetFileName="SomeEventHandlers.ts">SomeEventHandlers.ts</ProjectItem>
+        </Folder>
+        <Folder Name="Styles" TargetFolderName="Styles">
+          <ProjectItem ReplaceParameters="true" TargetFileName="Template.scss">Template.scss</ProjectItem>
+        </Folder>
+      </Folder>
+    </Project>
+  </TemplateContent>
+</VSTemplate>

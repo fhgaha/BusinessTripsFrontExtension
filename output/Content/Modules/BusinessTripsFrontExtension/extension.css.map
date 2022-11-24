@@ -1,0 +1,1 @@
+{"version":3,"sources":["Styles/Template.scss","Styles/Template.css"],"names":[],"mappings":"AAAA;EACI,UAAU;EACV,WAAW;ACCf","file":"extension.css","sourcesContent":["div.template {\r\n    color: red;\r\n    width: 10px;\r\n}","div.template {\n  color: red;\n  width: 10px;\n}\n"]}
