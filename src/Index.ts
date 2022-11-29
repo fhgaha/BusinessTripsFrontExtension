@@ -1,6 +1,8 @@
 ﻿import * as SomeEventHandlers from "./EventHandlers/SomeEventHandlers";
 import { extensionManager } from "@docsvision/webclient/System/ExtensionManager";
-
+import { Service } from "@docsvision/webclient/System/Service";
+import { $CustomEmployeeDataController, CustomEmployeeDataController } from "./Controllers/CustomEmployeeDataController";
+import { $RequestManager } from "@docsvision/webclient/System/$RequestManager";
 
 // Главная входная точка всего расширения
 // Данный файл должен импортировать прямо или косвенно все остальные файлы, 
@@ -9,8 +11,14 @@ import { extensionManager } from "@docsvision/webclient/System/ExtensionManager"
 // Регистрация расширения позволяет корректно установить все
 // обработчики событий, сервисы и прочие сущности web-приложения.
 extensionManager.registerExtension({
-    name: "Template front extension",
-    version: "5.5.15",
-    globalEventHandlers: [ SomeEventHandlers ]
-
+    //name: "Template front extension",
+    name: "Business Trip Front Extension",
+    version: "1.0.0",
+    globalEventHandlers: [ SomeEventHandlers ],
+    layoutServices: [
+        Service.fromFactory(
+            $CustomEmployeeDataController,
+            (services: $RequestManager) => new CustomEmployeeDataController(services)
+        )
+    ]
 })

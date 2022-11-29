@@ -6,7 +6,8 @@ import { extensionManager } from "@docsvision/webclient/System/ExtensionManager"
 // Регистрация расширения позволяет корректно установить все
 // обработчики событий, сервисы и прочие сущности web-приложения.
 extensionManager.registerExtension({
-    name: "Template front extension",
+    // name: "Template front extension",
+    name: "Business trip front extension",
     version: "5.5.13",
     globalEventHandlers: [SomeEventHandlers]
 });

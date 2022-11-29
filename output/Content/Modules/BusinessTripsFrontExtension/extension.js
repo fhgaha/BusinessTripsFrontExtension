@@ -1,4 +1,22 @@
-define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvision/webclient/System/ExtensionManager'], function (tslib, MessageBox, ExtensionManager) { 'use strict';
+define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvision/webclient/System/LayoutManager', '@docsvision/webclient/System/ServiceUtils', '@docsvision/webclient/System/UrlStore', '@docsvision/webclient/System/ExtensionManager', '@docsvision/webclient/System/Service'], function (tslib, MessageBox, LayoutManager, ServiceUtils, UrlStore, ExtensionManager, Service) { 'use strict';
+
+	var CustomEmployeeDataController = /** @class */ (function () {
+	    function CustomEmployeeDataController(services) {
+	        this.services = services;
+	    }
+	    CustomEmployeeDataController.prototype.GetEmployeeData = function (employeeId) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomEmployeeData", "CustomEmployeeData");
+	        var data = { employeeId: employeeId };
+	        return this.services.requestManager.post(url, JSON.stringify(data));
+	    };
+	    CustomEmployeeDataController.prototype.GetEmployeesFromGroup = function (groupName) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomEmployeesFromGroup", "CustomEmployeeData");
+	        var data = { groupName: groupName };
+	        return this.services.requestManager.post(url, JSON.stringify(data));
+	    };
+	    return CustomEmployeeDataController;
+	}());
+	var $CustomEmployeeDataController = ServiceUtils.serviceName(function (s) { return s.CustomEmployeeDataController; });
 
 	//В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 	//и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
@@ -75,12 +93,111 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	        });
 	    });
 	}
+	//#region отмена сохранения, не работает
+	//!!! root имеет событие Подготовка к сохранению карточки
+	//В разметке на «редактирование»: перед сохранением карточки проверить, что заполнен элемент 
+	//«Номер заявки» и «Название», если он пустой, выдавать предупреждение и отменять сохранение.
+	function savingButtons_beforeClick(sender, e) {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout, numberControl, nameControl, savingBtnContol;
+	        return tslib.__generator(this, function (_a) {
+	            layout = sender.layout;
+	            numberControl = layout.controls.tryGet("applicationNumber");
+	            nameControl = layout.controls.tryGet("name");
+	            savingBtnContol = layout.controls.tryGet("savingButtons");
+	            if (!numberControl || !nameControl)
+	                return [2 /*return*/];
+	            if (!numberControl.hasValue() || !nameControl.hasValue()) {
+	                MessageBox.MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
+	                // sender.performCancel();
+	                savingBtnContol.performCancel();
+	                return [2 /*return*/];
+	            }
+	            // sender.performSave();
+	            savingBtnContol.performSave();
+	            return [2 /*return*/];
+	        });
+	    });
+	}
+	// export function onCardSaving(sender: Layout, e: CancelableApiEvent<SaveControlDataModelEventArgs>) {
+	//     let layout = sender.layout;
+	// 	let numberControl = layout.controls.tryGet<Numerator>("applicationNumber");
+	// 	let nameControl = layout.controls.tryGet<TextBox>("name");
+	// 	if (!numberControl.hasValue() || !nameControl.hasValue())
+	// 	{
+	// 		MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
+	// 		e.cancel();
+	// 		return;
+	// 	}
+	// 	e.accept();
+	// }
+	//#endregion
+	//В разметке на «редактирование»: при изменении поля «Командируемый», 
+	//поля «Руководитель» и «Телефон» необходимо заполнить данными из сотрудника, выбранного в поле.
+	function employeeToSend_ChangeData(sender) {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout, managerControl, phoneControl, customEmplService, model;
+	        return tslib.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0:
+	                    layout = sender.layout;
+	                    managerControl = layout.controls.tryGet("supervisor");
+	                    phoneControl = layout.controls.tryGet("phoneNumber");
+	                    if (!managerControl || !phoneControl)
+	                        return [2 /*return*/];
+	                    if (!sender.hasValue()) return [3 /*break*/, 2];
+	                    customEmplService = layout.getService($CustomEmployeeDataController);
+	                    return [4 /*yield*/, customEmplService.GetEmployeeData(sender.params.value.id)];
+	                case 1:
+	                    model = _a.sent();
+	                    if (model) {
+	                        managerControl.params.value = model.manager;
+	                        phoneControl.params.value = model.phone;
+	                        return [2 /*return*/];
+	                    }
+	                    _a.label = 2;
+	                case 2:
+	                    managerControl.params.value = null;
+	                    phoneControl.params.value = null;
+	                    return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
+	function EditLayout_CardActivated() {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout, isCreateLayout, managerControl, service, model;
+	        return tslib.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0:
+	                    layout = LayoutManager.layoutManager.cardLayout;
+	                    isCreateLayout = layout.layoutInfo.action == 2;
+	                    if (!isCreateLayout)
+	                        return [2 /*return*/];
+	                    managerControl = layout.controls.tryGet("whoArranges");
+	                    if (!managerControl)
+	                        return [2 /*return*/];
+	                    service = layout.getService($CustomEmployeeDataController);
+	                    return [4 /*yield*/, service.GetEmployeesFromGroup("Секретарь")];
+	                case 1:
+	                    model = _a.sent();
+	                    if (model) {
+	                        managerControl.params.value = model.employees;
+	                    }
+	                    return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
 
 	var SomeEventHandlers = /*#__PURE__*/Object.freeze({
 		__proto__: null,
 		dateSince_ChangeData: dateSince_ChangeData,
 		dateTill_ChangeData: dateTill_ChangeData,
-		shortInfo_click: shortInfo_click
+		shortInfo_click: shortInfo_click,
+		savingButtons_beforeClick: savingButtons_beforeClick,
+		employeeToSend_ChangeData: employeeToSend_ChangeData,
+		EditLayout_CardActivated: EditLayout_CardActivated
 	});
 
 	// Главная входная точка всего расширения
@@ -89,9 +206,13 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	// Регистрация расширения позволяет корректно установить все
 	// обработчики событий, сервисы и прочие сущности web-приложения.
 	ExtensionManager.extensionManager.registerExtension({
-	    name: "Template front extension",
-	    version: "5.5.15",
-	    globalEventHandlers: [SomeEventHandlers]
+	    //name: "Template front extension",
+	    name: "Business Trip Front Extension",
+	    version: "1.0.0",
+	    globalEventHandlers: [SomeEventHandlers],
+	    layoutServices: [
+	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); })
+	    ]
 	});
 
 });
