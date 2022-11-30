@@ -1,5 +1,18 @@
 define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvision/webclient/System/LayoutManager', '@docsvision/webclient/System/ServiceUtils', '@docsvision/webclient/System/UrlStore', '@docsvision/webclient/System/ExtensionManager', '@docsvision/webclient/System/Service'], function (tslib, MessageBox, LayoutManager, ServiceUtils, UrlStore, ExtensionManager, Service) { 'use strict';
 
+	var CustomCityDataController = /** @class */ (function () {
+	    function CustomCityDataController(services) {
+	        this.services = services;
+	    }
+	    CustomCityDataController.prototype.GetCityData = function (cityId) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomCityData", "CustomCityData");
+	        var data = { cityId: cityId };
+	        return this.services.requestManager.post(url, JSON.stringify(data));
+	    };
+	    return CustomCityDataController;
+	}());
+	var $CustomCityDataController = ServiceUtils.serviceName(function (s) { return s.CustomCityDataController; });
+
 	var CustomEmployeeDataController = /** @class */ (function () {
 	    function CustomEmployeeDataController(services) {
 	        this.services = services;
@@ -67,7 +80,7 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	    var otherDateOnly = otherDate.setHours(0, 0, 0, 0);
 	    var milliseconds = Math.abs(senderDateOnly - otherDateOnly);
 	    var millisecondsPerDay = 1000 * 60 * 60 * 24;
-	    return Math.floor(milliseconds / millisecondsPerDay);
+	    return Math.floor(milliseconds / millisecondsPerDay) + 1;
 	}
 	//В разметке на «чтение»: добавить на ленту кнопку, по нажатию на кнопку 
 	//выводить сообщение (MessageBox.ShowInfo) с краткой информацией по заявке: 
@@ -164,7 +177,9 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	        });
 	    });
 	}
-	function EditLayout_CardActivated() {
+	// В разметке на «редактирование»: при первом открытии карточки в поле «Кто оформляет» 
+	//должны вписываться сотрудники из группы справочника сотрудников - «Секретарь».
+	function fillWhoArranges_ElementsLoaded() {
 	    return tslib.__awaiter(this, void 0, void 0, function () {
 	        var layout, isCreateLayout, managerControl, service, model;
 	        return tslib.__generator(this, function (_a) {
@@ -189,6 +204,42 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	        });
 	    });
 	}
+	//В разметке на «редактирование»: при выборе значения в поле «Город», необходимо получить значение 
+	//из этого элемента справочника (мы его создавали ранее, поле «Суточные») и вписать в поле 
+	//«Сумма командировочных», рассчитав по следующей формуле: 
+	//«Суточные» * значение в поле «Кол-во дней в командировке».
+	function city_ChangeData(sender) {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout, tripDaysContol, expensesContol, service, model;
+	        return tslib.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0:
+	                    layout = sender.layout;
+	                    tripDaysContol = layout.controls.tryGet("tripDays");
+	                    expensesContol = layout.controls.tryGet("expenses");
+	                    if (!tripDaysContol || !expensesContol)
+	                        return [2 /*return*/];
+	                    if (!tripDaysContol.hasValue()
+	                    // || tripDaysContol.params.value <= 0
+	                    )
+	                        return [2 /*return*/];
+	                    if (!sender.hasValue()) return [3 /*break*/, 2];
+	                    service = layout.getService($CustomCityDataController);
+	                    return [4 /*yield*/, service.GetCityData(sender.params.value.id)];
+	                case 1:
+	                    model = _a.sent();
+	                    if (model) {
+	                        expensesContol.params.value = parseFloat(model.dailyAllowance) * tripDaysContol.value;
+	                        return [2 /*return*/];
+	                    }
+	                    _a.label = 2;
+	                case 2:
+	                    expensesContol.params.value = null;
+	                    return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
 
 	var SomeEventHandlers = /*#__PURE__*/Object.freeze({
 		__proto__: null,
@@ -197,7 +248,8 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 		shortInfo_click: shortInfo_click,
 		savingButtons_beforeClick: savingButtons_beforeClick,
 		employeeToSend_ChangeData: employeeToSend_ChangeData,
-		EditLayout_CardActivated: EditLayout_CardActivated
+		fillWhoArranges_ElementsLoaded: fillWhoArranges_ElementsLoaded,
+		city_ChangeData: city_ChangeData
 	});
 
 	// Главная входная точка всего расширения
@@ -211,7 +263,8 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	    version: "1.0.0",
 	    globalEventHandlers: [SomeEventHandlers],
 	    layoutServices: [
-	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); })
+	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); }),
+	        Service.Service.fromFactory($CustomCityDataController, function (services) { return new CustomCityDataController(services); }),
 	    ]
 	});
 
