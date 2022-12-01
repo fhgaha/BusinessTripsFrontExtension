@@ -1,6 +1,10 @@
 {
   "ExpandedNodes": [
-    ""
+    "",
+    "\\src",
+    "\\src\\EventHandlers",
+    "\\src\\Models"
   ],
+  "SelectedNode": "\\src\\EventHandlers\\SomeEventHandlers.ts",
   "PreviewInSolutionExplorer": false
 }

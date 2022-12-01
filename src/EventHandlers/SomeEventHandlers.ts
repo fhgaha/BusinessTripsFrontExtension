@@ -1,8 +1,10 @@
+import { CardKind } from "@docsvision/webclient/BackOffice/CardKind";
 import { DirectoryDesignerRow } from "@docsvision/webclient/BackOffice/DirectoryDesignerRow";
 import { Employee } from "@docsvision/webclient/BackOffice/Employee";
 import { findStaffSection } from "@docsvision/webclient/BackOffice/FindStaffSection";
 import { MultipleEmployees } from "@docsvision/webclient/BackOffice/MultipleEmployees";
 import { Numerator } from "@docsvision/webclient/BackOffice/Numerator";
+import { State } from "@docsvision/webclient/BackOffice/State";
 import { $CardController, $DepartmentController, $EmployeeController, $LayoutStaffController, $StaffDirectoryItemsController } from "@docsvision/webclient/Generated/DocsVision.WebClient.Controllers";
 import { GenModels } from "@docsvision/webclient/Generated/DocsVision.WebClient.Models";
 import { MessageBox } from "@docsvision/webclient/Helpers/MessageBox/MessageBox";
@@ -17,6 +19,7 @@ import { services } from "@docsvision/webclient/Platform/TestUtils";
 import { TextArea } from "@docsvision/webclient/Platform/TextArea";
 import { TextBox } from "@docsvision/webclient/Platform/TextBox";
 import { CancelableApiEvent } from "@docsvision/webclient/System/ApiEvent";
+import { BaseControl } from "@docsvision/webclient/System/BaseControl";
 import { ControlContext } from "@docsvision/webclient/System/ControlContext";
 import { ICancelableEventArgs } from "@docsvision/webclient/System/ICancelableEventArgs";
 import { IEventArgs } from "@docsvision/webclient/System/IEventArgs";
@@ -25,6 +28,7 @@ import { layoutManager } from "@docsvision/webclient/System/LayoutManager";
 import { func } from "prop-types";
 import { $CustomCityDataController } from "../Controllers/CustomCityDataController";
 import { $CustomEmployeeDataController } from "../Controllers/CustomEmployeeDataController";
+import { $CustomOperationDataController } from "../Controllers/CustomOperationDataController";
 
 //В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 //и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
@@ -146,13 +150,14 @@ export async function employeeToSend_ChangeData(sender: Employee) {
 export async function fillWhoArranges_ElementsLoaded() {
 	let layout = layoutManager.cardLayout;
 	let isCreateLayout = layout.layoutInfo.action == 2; // View: = 0 Edit: = 1 Create: = 2
+	//let isCreateLayout = layout.layoutInfo.action = GenModels.LayoutAction.Create;
 	if (!isCreateLayout) return;
 
 	let managerControl = layout.controls.tryGet<MultipleEmployees>("whoArranges");
 	if (!managerControl) return;
 	let service = layout.getService($CustomEmployeeDataController);
 	let model = await service.GetEmployeesFromGroup("Секретарь");
-	if (model){
+	if (model) {
 		managerControl.params.value = model.employees;
 	}
 }
@@ -162,25 +167,12 @@ export async function fillWhoArranges_ElementsLoaded() {
 //«Сумма командировочных», рассчитав по следующей формуле: 
 //«Суточные» * значение в поле «Кол-во дней в командировке».
 export async function city_ChangeData(sender: DirectoryDesignerRow) {
-// ILayoutPropertyItem cityControl = CustomizableControl.FindPropertyItem<ILayoutPropertyItem>("City");
-// if (cityControl == null) return;
-// SpinEdit daysControl = CustomizableControl.FindPropertyItem<SpinEdit>("TripDays");
-// if (daysControl == null) return;
-// ILayoutPropertyItem expensesControl = CustomizableControl.FindPropertyItem<ILayoutPropertyItem>("Expenses");
-// if (expensesControl == null) return;
-// BaseUniversalItem citiesRow = ObjContext.GetObject<BaseUniversalItem>((Guid)cityControl.ControlValue);
-// if (citiesRow == null) return;
-// string allowance = citiesRow.ItemCard.MainInfo["DailyAllowance"].ToString();
-// expensesControl.ControlValue = decimal.Parse(allowance) * daysControl.Value;
-
 	let layout = sender.layout;
 	let tripDaysContol = layout.controls.tryGet<NumberControl>("tripDays");
 	let expensesContol = layout.controls.tryGet<NumberControl>("expenses");
 	if (!tripDaysContol || !expensesContol) return;
-	if (!tripDaysContol.hasValue() 
-	// || tripDaysContol.params.value <= 0
-	) return;
-	
+	if (!tripDaysContol.hasValue()) return;
+
 	if (sender.hasValue()) {
 		let service = layout.getService($CustomCityDataController);
 		let model = await service.GetCityData(sender.params.value.id);
@@ -190,4 +182,38 @@ export async function city_ChangeData(sender: DirectoryDesignerRow) {
 		}
 	}
 	expensesContol.params.value = null;
+}
+
+// В разметке на «чтение»: добавить кнопку на форму карточки, переводящую карточку в состояние 
+// «На согласование» и доступна только в состоянии «Проект».
+export async function toApproving_Click(sender: CustomButton) {
+// private void ToApproving_ItemClick(System.Object sender, DevExpress.XtraBars.ItemClickEventArgs e)
+// {
+// ILayoutPropertyItem stateControl = CustomizableControl.FindPropertyItem<ILayoutPropertyItem>("State");
+// if (stateControl == null) return;
+
+// IStateService stateService = ObjContext.GetService<IStateService>();
+// IList<StatesStateMachineBranch> statesStateMachineBranch = stateService.GetStateMachineBranches(BaseObject.SystemInfo.CardKind);
+// StatesStateMachineBranch toApprovingBranch = statesStateMachineBranch.Single(b => b.Operation.DefaultName == "ToApproving");
+// CardControl.ChangeState(toApprovingBranch);
+
+// if (BaseObject.SystemInfo.State.DefaultName != "Project") 
+// {
+// 	BarItemLink il = CustomizableControl.RibbonControl
+// 		.Pages["Документ"]
+// 		.Groups["stateMachineRibbonPageGroup"]
+// 		.ItemLinks.Single(link => link.Item.Name == "ToApproving");
+		
+// 	il.Item.Enabled = false;
+// }
+// }
+	let layout = sender.layout;
+	let stateContol = layout.controls.tryGet<State>("state");
+	if (stateContol == null) return;
+	let service = layout.getService($CustomOperationDataController);
+	let id = layout.cardInfo.id;
+	let data = await service.GetOperationData(id, "ToApproving");
+	await layout.changeState(data.operationId);
+
+
 }

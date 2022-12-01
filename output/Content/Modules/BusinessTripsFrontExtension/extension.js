@@ -31,6 +31,19 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	}());
 	var $CustomEmployeeDataController = ServiceUtils.serviceName(function (s) { return s.CustomEmployeeDataController; });
 
+	var CustomOperationDataController = /** @class */ (function () {
+	    function CustomOperationDataController(services) {
+	        this.services = services;
+	    }
+	    CustomOperationDataController.prototype.GetOperationData = function (cardId, endStateName) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomOperationData", "CustomOperationData");
+	        var data = { cardId: cardId, endStateName: endStateName };
+	        return this.services.requestManager.post(url, JSON.stringify(data));
+	    };
+	    return CustomOperationDataController;
+	}());
+	var $CustomOperationDataController = ServiceUtils.serviceName(function (s) { return s.CustomOperationDataController; });
+
 	//В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 	//и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
 	//в поле «Кол-во дней в командировке».
@@ -187,6 +200,7 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	                case 0:
 	                    layout = LayoutManager.layoutManager.cardLayout;
 	                    isCreateLayout = layout.layoutInfo.action == 2;
+	                    //let isCreateLayout = layout.layoutInfo.action = GenModels.LayoutAction.Create;
 	                    if (!isCreateLayout)
 	                        return [2 /*return*/];
 	                    managerControl = layout.controls.tryGet("whoArranges");
@@ -219,9 +233,7 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	                    expensesContol = layout.controls.tryGet("expenses");
 	                    if (!tripDaysContol || !expensesContol)
 	                        return [2 /*return*/];
-	                    if (!tripDaysContol.hasValue()
-	                    // || tripDaysContol.params.value <= 0
-	                    )
+	                    if (!tripDaysContol.hasValue())
 	                        return [2 /*return*/];
 	                    if (!sender.hasValue()) return [3 /*break*/, 2];
 	                    service = layout.getService($CustomCityDataController);
@@ -240,6 +252,31 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	        });
 	    });
 	}
+	// В разметке на «чтение»: добавить кнопку на форму карточки, переводящую карточку в состояние 
+	// «На согласование» и доступна только в состоянии «Проект».
+	function toApproving_Click(sender) {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout, stateContol, service, id, data;
+	        return tslib.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0:
+	                    layout = sender.layout;
+	                    stateContol = layout.controls.tryGet("state");
+	                    if (stateContol == null)
+	                        return [2 /*return*/];
+	                    service = layout.getService($CustomOperationDataController);
+	                    id = layout.cardInfo.id;
+	                    return [4 /*yield*/, service.GetOperationData(id, "ToApproving")];
+	                case 1:
+	                    data = _a.sent();
+	                    return [4 /*yield*/, layout.changeState(data.operationId)];
+	                case 2:
+	                    _a.sent();
+	                    return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
 
 	var SomeEventHandlers = /*#__PURE__*/Object.freeze({
 		__proto__: null,
@@ -249,7 +286,8 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 		savingButtons_beforeClick: savingButtons_beforeClick,
 		employeeToSend_ChangeData: employeeToSend_ChangeData,
 		fillWhoArranges_ElementsLoaded: fillWhoArranges_ElementsLoaded,
-		city_ChangeData: city_ChangeData
+		city_ChangeData: city_ChangeData,
+		toApproving_Click: toApproving_Click
 	});
 
 	// Главная входная точка всего расширения
@@ -258,13 +296,13 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	// Регистрация расширения позволяет корректно установить все
 	// обработчики событий, сервисы и прочие сущности web-приложения.
 	ExtensionManager.extensionManager.registerExtension({
-	    //name: "Template front extension",
 	    name: "Business Trip Front Extension",
 	    version: "1.0.0",
 	    globalEventHandlers: [SomeEventHandlers],
 	    layoutServices: [
 	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); }),
 	        Service.Service.fromFactory($CustomCityDataController, function (services) { return new CustomCityDataController(services); }),
+	        Service.Service.fromFactory($CustomOperationDataController, function (services) { return new CustomOperationDataController(services); }),
 	    ]
 	});
 
