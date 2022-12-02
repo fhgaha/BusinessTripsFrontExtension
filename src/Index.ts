@@ -4,7 +4,7 @@ import { Service } from "@docsvision/webclient/System/Service";
 import { $CustomEmployeeDataController, CustomEmployeeDataController } from "./Controllers/CustomEmployeeDataController";
 import { $RequestManager } from "@docsvision/webclient/System/$RequestManager";
 import { $CustomCityDataController, CustomCityDataController } from "./Controllers/CustomCityDataController";
-import { $CustomOperationDataController, CustomOperationDataController } from "./Controllers/CustomOperationDataController";
+import { $CustomApprovingStageOperationDataController, CustomApprovingStageOperationDataController } from "./Controllers/CustomOperationDataController";
 
 // Главная входная точка всего расширения
 // Данный файл должен импортировать прямо или косвенно все остальные файлы, 
@@ -26,8 +26,8 @@ extensionManager.registerExtension({
             (services: $RequestManager) => new CustomCityDataController(services)
         ),
         Service.fromFactory(
-            $CustomOperationDataController,
-            (services: $RequestManager) => new CustomOperationDataController(services)
+            $CustomApprovingStageOperationDataController,
+            (services: $RequestManager) => new CustomApprovingStageOperationDataController(services)
         ),
     ]
 })

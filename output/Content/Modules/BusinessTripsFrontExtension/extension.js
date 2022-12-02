@@ -1,4 +1,4 @@
-define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvision/webclient/System/LayoutManager', '@docsvision/webclient/System/ServiceUtils', '@docsvision/webclient/System/UrlStore', '@docsvision/webclient/System/ExtensionManager', '@docsvision/webclient/System/Service'], function (tslib, MessageBox, LayoutManager, ServiceUtils, UrlStore, ExtensionManager, Service) { 'use strict';
+define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvision/webclient/System/LayoutManager', '@docsvision/webclient/System/ServiceUtils', '@docsvision/webclient/System/UrlStore', '@docsvision/webclient/System/ExtensionManager', '@docsvision/webclient/System/Service'], function (tslib, DocsVision_WebClient_Models, MessageBox, LayoutManager, ServiceUtils, UrlStore, ExtensionManager, Service) { 'use strict';
 
 	var CustomCityDataController = /** @class */ (function () {
 	    function CustomCityDataController(services) {
@@ -31,18 +31,18 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	}());
 	var $CustomEmployeeDataController = ServiceUtils.serviceName(function (s) { return s.CustomEmployeeDataController; });
 
-	var CustomOperationDataController = /** @class */ (function () {
-	    function CustomOperationDataController(services) {
+	var CustomApprovingStageOperationDataController = /** @class */ (function () {
+	    function CustomApprovingStageOperationDataController(services) {
 	        this.services = services;
 	    }
-	    CustomOperationDataController.prototype.GetOperationData = function (cardId, endStateName) {
-	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomOperationData", "CustomOperationData");
-	        var data = { cardId: cardId, endStateName: endStateName };
+	    CustomApprovingStageOperationDataController.prototype.GetApprovingStageOperationData = function (cardId, approvalStageName) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomApprovingStageOperationData", "CustomApprovingStageOperationData");
+	        var data = { cardId: cardId, approvalStageName: approvalStageName };
 	        return this.services.requestManager.post(url, JSON.stringify(data));
 	    };
-	    return CustomOperationDataController;
+	    return CustomApprovingStageOperationDataController;
 	}());
-	var $CustomOperationDataController = ServiceUtils.serviceName(function (s) { return s.CustomOperationDataController; });
+	var $CustomApprovingStageOperationDataController = ServiceUtils.serviceName(function (s) { return s.CustomApprovingStageOperationDataController; });
 
 	//В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 	//и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
@@ -190,17 +190,36 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	        });
 	    });
 	}
+	function elementsLoadedEdit() {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        return tslib.__generator(this, function (_a) {
+	            switch (_a.label) {
+	                case 0: return [4 /*yield*/, fillWhoArranges()];
+	                case 1:
+	                    _a.sent();
+	                    return [2 /*return*/];
+	            }
+	        });
+	    });
+	}
+	function elementsLoadedView() {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        return tslib.__generator(this, function (_a) {
+	            SetToApprovingButtonCanClick();
+	            return [2 /*return*/];
+	        });
+	    });
+	}
 	// В разметке на «редактирование»: при первом открытии карточки в поле «Кто оформляет» 
 	//должны вписываться сотрудники из группы справочника сотрудников - «Секретарь».
-	function fillWhoArranges_ElementsLoaded() {
+	function fillWhoArranges() {
 	    return tslib.__awaiter(this, void 0, void 0, function () {
 	        var layout, isCreateLayout, managerControl, service, model;
 	        return tslib.__generator(this, function (_a) {
 	            switch (_a.label) {
 	                case 0:
 	                    layout = LayoutManager.layoutManager.cardLayout;
-	                    isCreateLayout = layout.layoutInfo.action == 2;
-	                    //let isCreateLayout = layout.layoutInfo.action = GenModels.LayoutAction.Create;
+	                    isCreateLayout = layout.layoutInfo.action = DocsVision_WebClient_Models.GenModels.LayoutAction.Create;
 	                    if (!isCreateLayout)
 	                        return [2 /*return*/];
 	                    managerControl = layout.controls.tryGet("whoArranges");
@@ -256,7 +275,7 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	// «На согласование» и доступна только в состоянии «Проект».
 	function toApproving_Click(sender) {
 	    return tslib.__awaiter(this, void 0, void 0, function () {
-	        var layout, stateContol, service, id, data;
+	        var layout, stateContol, service, model;
 	        return tslib.__generator(this, function (_a) {
 	            switch (_a.label) {
 	                case 0:
@@ -264,16 +283,43 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	                    stateContol = layout.controls.tryGet("state");
 	                    if (stateContol == null)
 	                        return [2 /*return*/];
-	                    service = layout.getService($CustomOperationDataController);
-	                    id = layout.cardInfo.id;
-	                    return [4 /*yield*/, service.GetOperationData(id, "ToApproving")];
+	                    service = layout.getService($CustomApprovingStageOperationDataController);
+	                    return [4 /*yield*/, service.GetApprovingStageOperationData(layout.cardInfo.id, "ToApproving")];
 	                case 1:
-	                    data = _a.sent();
-	                    return [4 /*yield*/, layout.changeState(data.operationId)];
-	                case 2:
-	                    _a.sent();
+	                    model = _a.sent();
+	                    stateContol.reloadFromServer();
+	                    SetToApprovingButtonCanClick();
 	                    return [2 /*return*/];
 	            }
+	        });
+	    });
+	}
+	function SetToApprovingButtonCanClick() {
+	    var layout = LayoutManager.layoutManager.cardLayout;
+	    var toApprovingControl = layout.controls.tryGet("toApproving");
+	    var state = layout.controls.tryGet("state");
+	    if (!toApprovingControl || !state)
+	        return;
+	    var isStateProject = state.params.value.caption == "Проект";
+	    var isView = layout.layoutInfo.action == DocsVision_WebClient_Models.GenModels.LayoutAction.View;
+	    toApprovingControl.params.disabled = isStateProject && isView ? false : true;
+	    toApprovingControl.forceUpdate();
+	}
+	// В разметке на «редактирование»: добавить кнопку «Запросить стоимость билетов».
+	// При ее нажатии должен вызываться метод серверного расширения, который запросит данные 
+	// по стоимости билетов. В метод должны быть переданы следующие данные:
+	//     • Код аэропорта назначения – по значению, указанному в контроле «Город» необходимо 
+	//       получить код аэропорта из справочника.
+	//     • Дата вылета – значение контрола «Даты командировки С:»
+	//     • Дата прилета – значение контрола «по:»
+	// Результатом выполнения данного метода серверного расширения должна быть сумма билетов (туда-обратно), 
+	//записанная в контрол «Стоимость билетов» (его необходимо так же добавить, по аналогии с толстым клиентом).
+	function getTicketCosts_Click(sender) {
+	    return tslib.__awaiter(this, void 0, void 0, function () {
+	        var layout;
+	        return tslib.__generator(this, function (_a) {
+	            layout = sender.layout;
+	            return [2 /*return*/];
 	        });
 	    });
 	}
@@ -285,9 +331,11 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 		shortInfo_click: shortInfo_click,
 		savingButtons_beforeClick: savingButtons_beforeClick,
 		employeeToSend_ChangeData: employeeToSend_ChangeData,
-		fillWhoArranges_ElementsLoaded: fillWhoArranges_ElementsLoaded,
+		elementsLoadedEdit: elementsLoadedEdit,
+		elementsLoadedView: elementsLoadedView,
 		city_ChangeData: city_ChangeData,
-		toApproving_Click: toApproving_Click
+		toApproving_Click: toApproving_Click,
+		getTicketCosts_Click: getTicketCosts_Click
 	});
 
 	// Главная входная точка всего расширения
@@ -302,7 +350,7 @@ define(['tslib', '@docsvision/webclient/Helpers/MessageBox/MessageBox', '@docsvi
 	    layoutServices: [
 	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); }),
 	        Service.Service.fromFactory($CustomCityDataController, function (services) { return new CustomCityDataController(services); }),
-	        Service.Service.fromFactory($CustomOperationDataController, function (services) { return new CustomOperationDataController(services); }),
+	        Service.Service.fromFactory($CustomApprovingStageOperationDataController, function (services) { return new CustomApprovingStageOperationDataController(services); }),
 	    ]
 	});
 

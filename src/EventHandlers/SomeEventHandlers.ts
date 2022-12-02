@@ -1,3 +1,4 @@
+import { CardApprovalStage } from "@docsvision/webclient/Approval/CardApprovalStage";
 import { CardKind } from "@docsvision/webclient/BackOffice/CardKind";
 import { DirectoryDesignerRow } from "@docsvision/webclient/BackOffice/DirectoryDesignerRow";
 import { Employee } from "@docsvision/webclient/BackOffice/Employee";
@@ -28,7 +29,7 @@ import { layoutManager } from "@docsvision/webclient/System/LayoutManager";
 import { func } from "prop-types";
 import { $CustomCityDataController } from "../Controllers/CustomCityDataController";
 import { $CustomEmployeeDataController } from "../Controllers/CustomEmployeeDataController";
-import { $CustomOperationDataController } from "../Controllers/CustomOperationDataController";
+import { $CustomApprovingStageOperationDataController } from "../Controllers/CustomOperationDataController";
 
 //В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 //и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
@@ -145,12 +146,19 @@ export async function employeeToSend_ChangeData(sender: Employee) {
 	phoneControl.params.value = null;
 }
 
+export async function elementsLoadedEdit() {
+	await fillWhoArranges();
+}
+
+export async function elementsLoadedView() {
+	SetToApprovingButtonCanClick();
+}
+
 // В разметке на «редактирование»: при первом открытии карточки в поле «Кто оформляет» 
 //должны вписываться сотрудники из группы справочника сотрудников - «Секретарь».
-export async function fillWhoArranges_ElementsLoaded() {
+async function fillWhoArranges() {
 	let layout = layoutManager.cardLayout;
-	let isCreateLayout = layout.layoutInfo.action == 2; // View: = 0 Edit: = 1 Create: = 2
-	//let isCreateLayout = layout.layoutInfo.action = GenModels.LayoutAction.Create;
+	let isCreateLayout = layout.layoutInfo.action = GenModels.LayoutAction.Create;
 	if (!isCreateLayout) return;
 
 	let managerControl = layout.controls.tryGet<MultipleEmployees>("whoArranges");
@@ -187,33 +195,47 @@ export async function city_ChangeData(sender: DirectoryDesignerRow) {
 // В разметке на «чтение»: добавить кнопку на форму карточки, переводящую карточку в состояние 
 // «На согласование» и доступна только в состоянии «Проект».
 export async function toApproving_Click(sender: CustomButton) {
-// private void ToApproving_ItemClick(System.Object sender, DevExpress.XtraBars.ItemClickEventArgs e)
-// {
-// ILayoutPropertyItem stateControl = CustomizableControl.FindPropertyItem<ILayoutPropertyItem>("State");
-// if (stateControl == null) return;
-
-// IStateService stateService = ObjContext.GetService<IStateService>();
-// IList<StatesStateMachineBranch> statesStateMachineBranch = stateService.GetStateMachineBranches(BaseObject.SystemInfo.CardKind);
-// StatesStateMachineBranch toApprovingBranch = statesStateMachineBranch.Single(b => b.Operation.DefaultName == "ToApproving");
-// CardControl.ChangeState(toApprovingBranch);
-
-// if (BaseObject.SystemInfo.State.DefaultName != "Project") 
-// {
-// 	BarItemLink il = CustomizableControl.RibbonControl
-// 		.Pages["Документ"]
-// 		.Groups["stateMachineRibbonPageGroup"]
-// 		.ItemLinks.Single(link => link.Item.Name == "ToApproving");
-		
-// 	il.Item.Enabled = false;
-// }
-// }
 	let layout = sender.layout;
 	let stateContol = layout.controls.tryGet<State>("state");
 	if (stateContol == null) return;
-	let service = layout.getService($CustomOperationDataController);
-	let id = layout.cardInfo.id;
-	let data = await service.GetOperationData(id, "ToApproving");
-	await layout.changeState(data.operationId);
+	let service = layout.getService($CustomApprovingStageOperationDataController);
+	let model = await service.GetApprovingStageOperationData(layout.cardInfo.id, "ToApproving");
+	stateContol.reloadFromServer();
 
-
+	SetToApprovingButtonCanClick();
 }
+
+function SetToApprovingButtonCanClick() {
+	let layout = layoutManager.cardLayout;
+	let toApprovingControl = layout.controls.tryGet<CustomButton>("toApproving");
+	let state = layout.controls.tryGet<State>("state");
+	if (!toApprovingControl || !state) return;
+
+	let isStateProject = state.params.value.caption == "Проект";
+	let isView = layout.layoutInfo.action == GenModels.LayoutAction.View;
+	toApprovingControl.params.disabled = isStateProject && isView ? false : true;
+	toApprovingControl.forceUpdate();
+}
+
+// В разметке на «редактирование»: добавить кнопку «Запросить стоимость билетов».
+// При ее нажатии должен вызываться метод серверного расширения, который запросит данные 
+// по стоимости билетов. В метод должны быть переданы следующие данные:
+//     • Код аэропорта назначения – по значению, указанному в контроле «Город» необходимо 
+//       получить код аэропорта из справочника.
+//     • Дата вылета – значение контрола «Даты командировки С:»
+//     • Дата прилета – значение контрола «по:»
+// Результатом выполнения данного метода серверного расширения должна быть сумма билетов (туда-обратно), 
+// записанная в контрол «Стоимость билетов» (его необходимо так же добавить, по аналогии с толстым клиентом).
+// export async function getTicketCosts_Click(sender: CustomButton) {
+// 	let layout = sender.layout;
+// 	let ticketsCostControl = layout.controls.tryGet<NumberControl>("ticketsCost");
+// 	if (!ticketsCostControl) return;
+// 	let service = layout.getService($CustomTicketsCostDataController);
+// 	let departureIATA = null;
+// 	let departureDate = null;
+// 	let destinationDate = null;
+// 	let model = service.GetTicketsCostData(departureIATA, departureDate, destinationDate);
+
+
+
+// }
