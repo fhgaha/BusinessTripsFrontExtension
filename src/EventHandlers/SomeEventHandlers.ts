@@ -1,35 +1,22 @@
-import { CardApprovalStage } from "@docsvision/webclient/Approval/CardApprovalStage";
-import { CardKind } from "@docsvision/webclient/BackOffice/CardKind";
 import { DirectoryDesignerRow } from "@docsvision/webclient/BackOffice/DirectoryDesignerRow";
 import { Employee } from "@docsvision/webclient/BackOffice/Employee";
-import { findStaffSection } from "@docsvision/webclient/BackOffice/FindStaffSection";
 import { MultipleEmployees } from "@docsvision/webclient/BackOffice/MultipleEmployees";
 import { Numerator } from "@docsvision/webclient/BackOffice/Numerator";
 import { State } from "@docsvision/webclient/BackOffice/State";
-import { $CardController, $DepartmentController, $EmployeeController, $LayoutStaffController, $StaffDirectoryItemsController } from "@docsvision/webclient/Generated/DocsVision.WebClient.Controllers";
 import { GenModels } from "@docsvision/webclient/Generated/DocsVision.WebClient.Models";
 import { MessageBox } from "@docsvision/webclient/Helpers/MessageBox/MessageBox";
-import { $EmployeesController } from "@docsvision/webclient/Legacy/EmployeesController";
-import { ContextMenu } from "@docsvision/webclient/Platform/ContextMenu";
 import { CustomButton } from "@docsvision/webclient/Platform/CustomButton";
 import { DateTimePicker } from "@docsvision/webclient/Platform/DateTimePicker";
-import { ISavingButtonClickEventArgs } from "@docsvision/webclient/Platform/ISavingButtonClickEventArgs";
 import { NumberControl } from "@docsvision/webclient/Platform/Number";
 import { SavingButtons } from "@docsvision/webclient/Platform/SavingButtons";
-import { services } from "@docsvision/webclient/Platform/TestUtils";
 import { TextArea } from "@docsvision/webclient/Platform/TextArea";
 import { TextBox } from "@docsvision/webclient/Platform/TextBox";
-import { CancelableApiEvent } from "@docsvision/webclient/System/ApiEvent";
-import { BaseControl } from "@docsvision/webclient/System/BaseControl";
-import { ControlContext } from "@docsvision/webclient/System/ControlContext";
 import { ICancelableEventArgs } from "@docsvision/webclient/System/ICancelableEventArgs";
-import { IEventArgs } from "@docsvision/webclient/System/IEventArgs";
-import { Layout, SaveControlDataModelEventArgs } from "@docsvision/webclient/System/Layout";
 import { layoutManager } from "@docsvision/webclient/System/LayoutManager";
-import { func } from "prop-types";
 import { $CustomCityDataController } from "../Controllers/CustomCityDataController";
 import { $CustomEmployeeDataController } from "../Controllers/CustomEmployeeDataController";
 import { $CustomApprovingStageOperationDataController } from "../Controllers/CustomOperationDataController";
+import { $CustomTicketsCostDataController } from "../Controllers/CustomTicketsCostDataController";
 
 //В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 //и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
@@ -49,6 +36,18 @@ async function setTripDaysValue(sender: DateTimePicker) {
 	let otherDateContol = layout.controls.tryGet<DateTimePicker>(otherDateContolName);
 	if (!tripDaysContol || !otherDateContol) return;
 
+	if (sender.params.name == "dateSince"){
+		if (sender.params.value > otherDateContol.params.value){
+			tripDaysContol.params.value = null;
+			return;
+		}
+	}
+	else{
+		if (sender.params.value < otherDateContol.params.value){
+			tripDaysContol.params.value = null;
+			return;
+		}
+	}
 	tripDaysContol.value = getDateDifference(sender, otherDateContol);
 }
 
@@ -77,53 +76,32 @@ export async function shortInfo_click(sender: CustomButton) {
 	MessageBox.ShowInfo(
 		"Номер заявки: {0}\n".format(numberControl.hasValue() ? numberControl.value.number : "не задано")
 		+ "Дата создания: {0}\n".format(crDateControl.hasValue() ? crDateControl.value.toLocaleDateString() : "не задано")
-		+ "Даты командировки С: {0} ".format(sinceContol.hasValue() ? sinceContol.value.toLocaleDateString() : "не задано")
+		+ "Даты командировки С: {0}".format(sinceContol.hasValue() ? sinceContol.value.toLocaleDateString() : "не задано")
 		+ "по: {0}\n".format(tillContol.hasValue() ? tillContol.value.toLocaleDateString() : "не задано")
 		+ "Основание для поездки: {0}".format(reasonControl.hasValue() ? reasonControl.value.toString() : "не задано")
 	);
 }
 
-//#region отмена сохранения, не работает
-//!!! root имеет событие Подготовка к сохранению карточки
-
 //В разметке на «редактирование»: перед сохранением карточки проверить, что заполнен элемент 
 //«Номер заявки» и «Название», если он пустой, выдавать предупреждение и отменять сохранение.
-export async function savingButtons_beforeClick(sender: SavingButtons, e: ISavingButtonClickEventArgs) {
+export async function savingButtons_saveClick(sender: SavingButtons, e: ICancelableEventArgs<SavingButtons>) {
 	let layout = sender.layout;
 	let numberControl = layout.controls.tryGet<Numerator>("applicationNumber");
 	let nameControl = layout.controls.tryGet<TextBox>("name");
-
-	let savingBtnContol = layout.controls.tryGet<SavingButtons>("savingButtons");
-
 	if (!numberControl || !nameControl) return;
 
-	if (!numberControl.hasValue() || !nameControl.hasValue()) {
-		MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
-		// sender.performCancel();
-		savingBtnContol.performCancel();
+	if (!numberControl.hasValue()) {
+		MessageBox.ShowInfo("Поле \"Номер заявки\" должно быть заполнено");
+		e.cancel();
 		return;
 	}
 
-	// sender.performSave();
-	savingBtnContol.performSave();
+	if (!nameControl.hasValue() || nameControl.value.trim() == "") {
+		MessageBox.ShowInfo("Поле \"Название\" должно быть заполнено");
+		e.cancel();
+		return;
+	}
 }
-
-// export function onCardSaving(sender: Layout, e: CancelableApiEvent<SaveControlDataModelEventArgs>) {
-//     let layout = sender.layout;
-// 	let numberControl = layout.controls.tryGet<Numerator>("applicationNumber");
-// 	let nameControl = layout.controls.tryGet<TextBox>("name");
-
-// 	if (!numberControl.hasValue() || !nameControl.hasValue())
-// 	{
-// 		MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
-// 		e.cancel();
-// 		return;
-// 	}
-// 	e.accept();
-// }
-
-//#endregion
-
 
 //В разметке на «редактирование»: при изменении поля «Командируемый», 
 //поля «Руководитель» и «Телефон» необходимо заполнить данными из сотрудника, выбранного в поле.
@@ -201,8 +179,6 @@ export async function toApproving_Click(sender: CustomButton) {
 	let service = layout.getService($CustomApprovingStageOperationDataController);
 	let model = await service.GetApprovingStageOperationData(layout.cardInfo.id, "ToApproving");
 	stateContol.reloadFromServer();
-
-	SetToApprovingButtonCanClick();
 }
 
 function SetToApprovingButtonCanClick() {
@@ -215,6 +191,7 @@ function SetToApprovingButtonCanClick() {
 	let isView = layout.layoutInfo.action == GenModels.LayoutAction.View;
 	toApprovingControl.params.disabled = isStateProject && isView ? false : true;
 	toApprovingControl.forceUpdate();
+	toApprovingControl.save();
 }
 
 // В разметке на «редактирование»: добавить кнопку «Запросить стоимость билетов».
@@ -226,16 +203,23 @@ function SetToApprovingButtonCanClick() {
 //     • Дата прилета – значение контрола «по:»
 // Результатом выполнения данного метода серверного расширения должна быть сумма билетов (туда-обратно), 
 // записанная в контрол «Стоимость билетов» (его необходимо так же добавить, по аналогии с толстым клиентом).
-// export async function getTicketCosts_Click(sender: CustomButton) {
-// 	let layout = sender.layout;
-// 	let ticketsCostControl = layout.controls.tryGet<NumberControl>("ticketsCost");
-// 	if (!ticketsCostControl) return;
-// 	let service = layout.getService($CustomTicketsCostDataController);
-// 	let departureIATA = null;
-// 	let departureDate = null;
-// 	let destinationDate = null;
-// 	let model = service.GetTicketsCostData(departureIATA, departureDate, destinationDate);
-
-
-
-// }
+export async function getTicketCosts_Click(sender: CustomButton) {
+	let layout = sender.layout;
+	let ticketsCostControl = layout.controls.tryGet<NumberControl>("ticketsCost");
+	let cityControl = layout.controls.tryGet<DirectoryDesignerRow>("city");
+	let sinceControl = layout.controls.tryGet<DateTimePicker>("dateSince");
+	let tillControl = layout.controls.tryGet<DateTimePicker>("dateTill");
+	if (!ticketsCostControl || !cityControl || !sinceControl || !tillControl) return;
+	let destinationId = cityControl.params.value.id
+	let departureDate = sinceControl.params.value;
+	let destinationDate = tillControl.params.value;
+	let service = layout.getService($CustomTicketsCostDataController);
+	let model = await service.GetTicketsCostData(destinationId, departureDate, destinationDate);
+	
+	if (model.cost == "-1.0"){
+		MessageBox.ShowInfo("Перелеты из Санкт-Петербурга осуществляются только в другие города");
+		ticketsCostControl.params.value = null;
+		return;
+	}
+	ticketsCostControl.params.value = parseFloat(model.cost);
+}

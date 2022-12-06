@@ -44,6 +44,20 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	}());
 	var $CustomApprovingStageOperationDataController = ServiceUtils.serviceName(function (s) { return s.CustomApprovingStageOperationDataController; });
 
+	var CustomTicketsCostDataController = /** @class */ (function () {
+	    function CustomTicketsCostDataController(services) {
+	        this.services = services;
+	    }
+	    CustomTicketsCostDataController.prototype.GetTicketsCostData = function (destinationId, departureDate, destinationDate) {
+	        var url = UrlStore.urlStore.urlResolver.resolveUrl("GetCustomTicketsCostData", "CustomTicketsCostData");
+	        var data = { destinationId: destinationId, departureDate: departureDate, destinationDate: destinationDate };
+	        var result = this.services.requestManager.post(url, JSON.stringify(data));
+	        return result;
+	    };
+	    return CustomTicketsCostDataController;
+	}());
+	var $CustomTicketsCostDataController = ServiceUtils.serviceName(function (s) { return s.CustomTicketsCostDataController; });
+
 	//В разметке на «редактирование»: при изменении контролов «Даты командировки С:» или «по:» 
 	//и, если заполнены оба поля необходимо рассчитать кол-во дней в командировке и записать 
 	//в поле «Кол-во дней в командировке».
@@ -81,6 +95,18 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	            otherDateContol = layout.controls.tryGet(otherDateContolName);
 	            if (!tripDaysContol || !otherDateContol)
 	                return [2 /*return*/];
+	            if (sender.params.name == "dateSince") {
+	                if (sender.params.value > otherDateContol.params.value) {
+	                    tripDaysContol.params.value = null;
+	                    return [2 /*return*/];
+	                }
+	            }
+	            else {
+	                if (sender.params.value < otherDateContol.params.value) {
+	                    tripDaysContol.params.value = null;
+	                    return [2 /*return*/];
+	                }
+	            }
 	            tripDaysContol.value = getDateDifference(sender, otherDateContol);
 	            return [2 /*return*/];
 	        });
@@ -112,52 +138,38 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	                return [2 /*return*/];
 	            MessageBox.MessageBox.ShowInfo("Номер заявки: {0}\n".format(numberControl.hasValue() ? numberControl.value.number : "не задано")
 	                + "Дата создания: {0}\n".format(crDateControl.hasValue() ? crDateControl.value.toLocaleDateString() : "не задано")
-	                + "Даты командировки С: {0} ".format(sinceContol.hasValue() ? sinceContol.value.toLocaleDateString() : "не задано")
+	                + "Даты командировки С: {0}".format(sinceContol.hasValue() ? sinceContol.value.toLocaleDateString() : "не задано")
 	                + "по: {0}\n".format(tillContol.hasValue() ? tillContol.value.toLocaleDateString() : "не задано")
 	                + "Основание для поездки: {0}".format(reasonControl.hasValue() ? reasonControl.value.toString() : "не задано"));
 	            return [2 /*return*/];
 	        });
 	    });
 	}
-	//#region отмена сохранения, не работает
-	//!!! root имеет событие Подготовка к сохранению карточки
 	//В разметке на «редактирование»: перед сохранением карточки проверить, что заполнен элемент 
 	//«Номер заявки» и «Название», если он пустой, выдавать предупреждение и отменять сохранение.
-	function savingButtons_beforeClick(sender, e) {
+	function savingButtons_saveClick(sender, e) {
 	    return tslib.__awaiter(this, void 0, void 0, function () {
-	        var layout, numberControl, nameControl, savingBtnContol;
+	        var layout, numberControl, nameControl;
 	        return tslib.__generator(this, function (_a) {
 	            layout = sender.layout;
 	            numberControl = layout.controls.tryGet("applicationNumber");
 	            nameControl = layout.controls.tryGet("name");
-	            savingBtnContol = layout.controls.tryGet("savingButtons");
 	            if (!numberControl || !nameControl)
 	                return [2 /*return*/];
-	            if (!numberControl.hasValue() || !nameControl.hasValue()) {
-	                MessageBox.MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
-	                // sender.performCancel();
-	                savingBtnContol.performCancel();
+	            if (!numberControl.hasValue()) {
+	                MessageBox.MessageBox.ShowInfo("Поле \"Номер заявки\" должно быть заполнено");
+	                e.cancel();
 	                return [2 /*return*/];
 	            }
-	            // sender.performSave();
-	            savingBtnContol.performSave();
+	            if (!nameControl.hasValue() || nameControl.value.trim() == "") {
+	                MessageBox.MessageBox.ShowInfo("Поле \"Название\" должно быть заполнено");
+	                e.cancel();
+	                return [2 /*return*/];
+	            }
 	            return [2 /*return*/];
 	        });
 	    });
 	}
-	// export function onCardSaving(sender: Layout, e: CancelableApiEvent<SaveControlDataModelEventArgs>) {
-	//     let layout = sender.layout;
-	// 	let numberControl = layout.controls.tryGet<Numerator>("applicationNumber");
-	// 	let nameControl = layout.controls.tryGet<TextBox>("name");
-	// 	if (!numberControl.hasValue() || !nameControl.hasValue())
-	// 	{
-	// 		MessageBox.ShowInfo("Поля \"Номер заявки\" и \"Название\" должны быть заполнены");
-	// 		e.cancel();
-	// 		return;
-	// 	}
-	// 	e.accept();
-	// }
-	//#endregion
 	//В разметке на «редактирование»: при изменении поля «Командируемый», 
 	//поля «Руководитель» и «Телефон» необходимо заполнить данными из сотрудника, выбранного в поле.
 	function employeeToSend_ChangeData(sender) {
@@ -288,7 +300,6 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	                case 1:
 	                    model = _a.sent();
 	                    stateContol.reloadFromServer();
-	                    SetToApprovingButtonCanClick();
 	                    return [2 /*return*/];
 	            }
 	        });
@@ -304,6 +315,7 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	    var isView = layout.layoutInfo.action == DocsVision_WebClient_Models.GenModels.LayoutAction.View;
 	    toApprovingControl.params.disabled = isStateProject && isView ? false : true;
 	    toApprovingControl.forceUpdate();
+	    toApprovingControl.save();
 	}
 	// В разметке на «редактирование»: добавить кнопку «Запросить стоимость билетов».
 	// При ее нажатии должен вызываться метод серверного расширения, который запросит данные 
@@ -313,13 +325,35 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	//     • Дата вылета – значение контрола «Даты командировки С:»
 	//     • Дата прилета – значение контрола «по:»
 	// Результатом выполнения данного метода серверного расширения должна быть сумма билетов (туда-обратно), 
-	//записанная в контрол «Стоимость билетов» (его необходимо так же добавить, по аналогии с толстым клиентом).
+	// записанная в контрол «Стоимость билетов» (его необходимо так же добавить, по аналогии с толстым клиентом).
 	function getTicketCosts_Click(sender) {
 	    return tslib.__awaiter(this, void 0, void 0, function () {
-	        var layout;
+	        var layout, ticketsCostControl, cityControl, sinceControl, tillControl, destinationId, departureDate, destinationDate, service, model;
 	        return tslib.__generator(this, function (_a) {
-	            layout = sender.layout;
-	            return [2 /*return*/];
+	            switch (_a.label) {
+	                case 0:
+	                    layout = sender.layout;
+	                    ticketsCostControl = layout.controls.tryGet("ticketsCost");
+	                    cityControl = layout.controls.tryGet("city");
+	                    sinceControl = layout.controls.tryGet("dateSince");
+	                    tillControl = layout.controls.tryGet("dateTill");
+	                    if (!ticketsCostControl || !cityControl || !sinceControl || !tillControl)
+	                        return [2 /*return*/];
+	                    destinationId = cityControl.params.value.id;
+	                    departureDate = sinceControl.params.value;
+	                    destinationDate = tillControl.params.value;
+	                    service = layout.getService($CustomTicketsCostDataController);
+	                    return [4 /*yield*/, service.GetTicketsCostData(destinationId, departureDate, destinationDate)];
+	                case 1:
+	                    model = _a.sent();
+	                    if (model.cost == "-1.0") {
+	                        MessageBox.MessageBox.ShowInfo("Перелеты из Санкт-Петербурга осуществляются только в другие города");
+	                        ticketsCostControl.params.value = null;
+	                        return [2 /*return*/];
+	                    }
+	                    ticketsCostControl.params.value = parseFloat(model.cost);
+	                    return [2 /*return*/];
+	            }
 	        });
 	    });
 	}
@@ -329,7 +363,7 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 		dateSince_ChangeData: dateSince_ChangeData,
 		dateTill_ChangeData: dateTill_ChangeData,
 		shortInfo_click: shortInfo_click,
-		savingButtons_beforeClick: savingButtons_beforeClick,
+		savingButtons_saveClick: savingButtons_saveClick,
 		employeeToSend_ChangeData: employeeToSend_ChangeData,
 		elementsLoadedEdit: elementsLoadedEdit,
 		elementsLoadedView: elementsLoadedView,
@@ -351,6 +385,7 @@ define(['tslib', '@docsvision/webclient/Generated/DocsVision.WebClient.Models', 
 	        Service.Service.fromFactory($CustomEmployeeDataController, function (services) { return new CustomEmployeeDataController(services); }),
 	        Service.Service.fromFactory($CustomCityDataController, function (services) { return new CustomCityDataController(services); }),
 	        Service.Service.fromFactory($CustomApprovingStageOperationDataController, function (services) { return new CustomApprovingStageOperationDataController(services); }),
+	        Service.Service.fromFactory($CustomTicketsCostDataController, function (services) { return new CustomTicketsCostDataController(services); }),
 	    ]
 	});
 
